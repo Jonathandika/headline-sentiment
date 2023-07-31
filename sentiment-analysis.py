@@ -5,7 +5,7 @@ import requests
 from tqdm import tqdm
 import time
 
-openai.api_key = "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"
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 
 ## STREAMLIT APP
@@ -112,7 +112,7 @@ st.subheader("Test Sentiment Analysis")
 
 text = st.text_area("Enter Headline", "Apple's new iPhone 12 is a big hit")
 if st.button("Analyze"):
-    if PIN == "CRAFTHK123":
+    if PIN == st.secrets["PIN"]:
         sentiment, reason = detect_sentiment_w_reason(text)
         st.text("Sentiment: {}".format(sentiment))
         st.text_area("Reason", reason, disabled=True)
@@ -125,7 +125,7 @@ st.divider()
 uploaded_file = st.file_uploader("Upload your headlines in Excel format here", type=['xlsx'])
 
 if st.button("Analyze Headlines"):
-    if PIN == "CRAFTHK123":
+    if PIN == st.secrets["PIN"]:
         if uploaded_file is None or COMPANY_NAME == "":
             if uploaded_file is None:
                 st.error("Please upload an Excel file")
