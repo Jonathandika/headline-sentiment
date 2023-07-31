@@ -199,7 +199,7 @@ if st.button("Analyze Headlines"):
                 st.dataframe(df_res_reason)
                 
             except Exception as e:
-                st.error("Something went wrong... Try with fewer headlines or try again later.")
+                st.error("Something went wrong... Try with fewer headlines or try again later. \n Error: {}".format(e))
 
     else:
         st.error("Wrong PIN")
