@@ -22,6 +22,7 @@ st.dataframe(df_apple)
 
 COMPANY_NAME = st.text_input("Enter Company Name", "Apple")
 ROLE = st.text_input("Enter Role", 'Media Analyst')
+PIN = st.text_input("Enter PIN", type="password")
 
 ## FUNCTIONS
 
@@ -111,90 +112,96 @@ st.subheader("Test Sentiment Analysis")
 
 text = st.text_area("Enter Headline", "Apple's new iPhone 12 is a big hit")
 if st.button("Analyze"):
-    sentiment, reason = detect_sentiment_w_reason(text)
-    st.text("Sentiment: {}".format(sentiment))
-    st.text_area("Reason", reason, disabled=True)
+    if PIN == "CRAFTHK123":
+        sentiment, reason = detect_sentiment_w_reason(text)
+        st.text("Sentiment: {}".format(sentiment))
+        st.text_area("Reason", reason, disabled=True)
+    else:
+        st.error("Wrong PIN")
+
 
 st.divider()
 
 uploaded_file = st.file_uploader("Upload your headlines in Excel format here", type=['xlsx'])
 
 if st.button("Analyze Headlines"):
-    if uploaded_file is None or COMPANY_NAME == "":
-        if uploaded_file is None:
-            st.error("Please upload an Excel file")
-        if COMPANY_NAME == "":
-            st.error("Please enter a company name")
-        if ROLE == "":
-            st.error("Please enter a role")
+    if PIN == "CRAFTHK123":
+        if uploaded_file is None or COMPANY_NAME == "":
+            if uploaded_file is None:
+                st.error("Please upload an Excel file")
+            if COMPANY_NAME == "":
+                st.error("Please enter a company name")
+            if ROLE == "":
+                st.error("Please enter a role")
+
+        else:
+            try:
+                df = pd.read_excel(uploaded_file)
+                df = df.drop_duplicates(subset=['Headline'])
+
+                st.text("Successfully uploaded headlines")
+                st.text("Number of headlines: {}".format(len(df)))
+                st.dataframe(df['Headline'].head(5))
+
+                progress_text = "Analyzing Sentiment. Please wait. This may take a while..."
+                my_bar = st.progress(0, text=progress_text)
+
+            
+                result = {
+                    "Headline" : [],
+                    "Sentiment" : [],
+                    "Reason" : []
+                }
+
+                max_retries = 5
+                wait_time = 30 # Time to wait before retrying failed request in seconds
+
+                for i, row in tqdm(enumerate(df.iterrows()), total=len(df)):
+                    retries = 0
+                    while retries < max_retries:
+                        try:
+                            time.sleep(0.5)
+                            sentiment, reason = detect_sentiment_w_reason(row[1]['Headline'])
+                            result["Headline"].append(row[1]['Headline'])
+                            result["Sentiment"].append(sentiment)
+                            result["Reason"].append(reason)
+                            my_bar.progress((i+1)/len(df), text=progress_text + f"  ({((i+1)/len(df))*100:.2f}%)")
+                            # If the above code executed without any exception, break the while loop
+                            break
+
+                        except Exception as e:
+                            st.error(f"Error occurred: {e}. Retrying...")
+                            retries += 1
+                            time.sleep(wait_time)
+
+                    if retries == max_retries:
+                        st.error(f"Failed to process the row after {max_retries} retries. Skipping...")
+                        continue
+
+
+                df_res_reason = pd.DataFrame(result)
+                
+                st.success('Sentiment Analysis Successful')
+
+                def convert_df(df):
+                    return df.to_csv().encode('utf-8')
+
+                csv = convert_df(df_res_reason)
+
+                st.download_button(
+                    label="Download Sentiment Result as CSV",
+                    data=csv,
+                    file_name='headline_sentiment.csv',
+                    mime='text/csv',
+                )
+                
+                st.subheader("Headline Sentiment Result")
+                st.dataframe(df_res_reason)
+                
+            except Exception as e:
+                st.error("Something went wrong... Try with fewer headlines or try again later.")
 
     else:
-        try:
-            df = pd.read_excel(uploaded_file)
-            df = df.drop_duplicates(subset=['Headline'])
-
-            st.text("Successfully uploaded headlines")
-            st.text("Number of headlines: {}".format(len(df)))
-            st.dataframe(df['Headline'].head(5))
-
-            progress_text = "Analyzing Sentiment. Please wait. This may take a while..."
-            my_bar = st.progress(0, text=progress_text)
-
-           
-            result = {
-                "Headline" : [],
-                "Sentiment" : [],
-                "Reason" : []
-            }
-
-            max_retries = 5
-            wait_time = 30 # Time to wait before retrying failed request in seconds
-
-            for i, row in tqdm(enumerate(df.iterrows()), total=len(df)):
-                retries = 0
-                while retries < max_retries:
-                    try:
-                        time.sleep(0.5)
-                        sentiment, reason = detect_sentiment_w_reason(row[1]['Headline'])
-                        result["Headline"].append(row[1]['Headline'])
-                        result["Sentiment"].append(sentiment)
-                        result["Reason"].append(reason)
-                        my_bar.progress((i+1)/len(df), text=progress_text + f"  ({((i+1)/len(df))*100:.2f}%)")
-                        # If the above code executed without any exception, break the while loop
-                        break
-
-                    except Exception as e:
-                        st.error(f"Error occurred: {e}. Retrying...")
-                        retries += 1
-                        time.sleep(wait_time)
-
-                if retries == max_retries:
-                    st.error(f"Failed to process the row after {max_retries} retries. Skipping...")
-                    continue
-
-
-            df_res_reason = pd.DataFrame(result)
-            
-            st.success('Sentiment Analysis Successful')
-
-            def convert_df(df):
-                return df.to_csv().encode('utf-8')
-
-            csv = convert_df(df_res_reason)
-
-            st.download_button(
-                label="Download Sentiment Result as CSV",
-                data=csv,
-                file_name='headline_sentiment.csv',
-                mime='text/csv',
-            )
-            
-            st.subheader("Headline Sentiment Result")
-            st.dataframe(df_res_reason)
-            
-        except Exception as e:
-            st.error("Something went wrong... Try with fewer headlines or try again later.")
-
-
+        st.error("Wrong PIN")
 
 
